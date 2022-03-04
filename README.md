@@ -3,7 +3,7 @@ Reproduction of the Park et al [Swapping Autoencoder for Deep Image Manipulation
 
 Reimplementers: [Callum Newlands](mailto:cn2g18@soton.ac.uk), [Jacob Scott](mailto:js11g18@soton.ac.uk), [Muhammed Qaid](mailto:mq1g18@soton.ac.uk) | University of Southampton [[ECS](https://www.ecs.soton.ac.uk/)]
 
-## Score of Reimplementation
+## Scope of Reimplementation
 
 ## Results and Report
 
