@@ -10,6 +10,9 @@ class PatchDiscriminator(nn.Module):
         image as a set of reference patches
 
         Takes a random sized patch (1/8 to 1/4 of the full image side-dimension up to 256) and outputs a scalar value
+
+        All patches should be scaled to the same size (patch_dim) (1/4 of image side-dimension) before being passed to
+        the discriminator -- Might need to be a power of 2, default: patch_dim=128
     """
     scale_up_to = 1024  # Patch size (dim*channels) to scale up to
     mc = 256 + 128  # Encoder output (maximum) number of channels to downscale to
@@ -17,18 +20,14 @@ class PatchDiscriminator(nn.Module):
     def __init__(self, patch_dim=128, channel_scale_factor=4.0):
         super().__init__()
 
-        # Since the patches have random sizes, they are upscaled to the same size before being passed to the
-        # co-occurrence discriminator
+        # Convolve 3 channels into a power of 2
         num_down_samples = int(math.ceil(math.log(patch_dim, 2)))
         scale_channel_amount = int(self.scale_up_to / (2 ** num_down_samples) * channel_scale_factor)
 
-        current_dim = patch_dim
-
         downscalers = []
         in_channels = scale_channel_amount
-        while current_dim > 4:
+        for sample in range(num_down_samples, 2, -1):
             out_channels = min(in_channels * 2, self.mc)
-            current_dim = current_dim / 2
             # Assuming antialiasing blur_filter
             downscalers.append(ResBlock(in_channels, out_channels))
             in_channels = out_channels
