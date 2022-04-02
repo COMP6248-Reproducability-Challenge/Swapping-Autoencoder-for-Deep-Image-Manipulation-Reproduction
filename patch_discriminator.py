@@ -4,6 +4,13 @@ from torch import nn
 from stylegan2_pytorch.stylegan2_model import ConvLayer, ResBlock, EqualLinear
 
 
+def get_random_patches(images, num_crops=8, patch_dim=128, min_scale=1 / 8, max_scale=1 / 4):
+    """
+        Generate num_crops random patches from each image in images
+    """
+    raise NotImplementedError()
+
+
 class PatchDiscriminator(nn.Module):
     """
         Co-occurrence patch discriminator -- determines if a patch in question (“real/fake patch”) is from the same

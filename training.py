@@ -1,6 +1,8 @@
-import torch
 from torch import optim
-from torch.utils.data import DataLoader, IterableDataset
+from torch.utils.data import DataLoader
+
+from data_loading import load_data
+from swapping_autoencoder import SwappingAutoencoder, ForwardMode as Mode
 
 
 class AutoencoderOptimiser:
@@ -25,8 +27,7 @@ class AutoencoderOptimiser:
         self.toggle_params_grad(self.autoencoder_params, True)
         self.toggle_params_grad(self.discriminator_params, False)
         self.optimiser_autoencoder.zero_grad()
-        fake_minibatch = self.model(real_minibatch)
-        loss = self.model.calculate_autoencoder_loss(real_minibatch, fake_minibatch)
+        loss = self.model(real_minibatch, Mode.AUTOENCODER_LOSS)
         loss.backward()
         self.optimiser_autoencoder.step()
 
@@ -34,15 +35,14 @@ class AutoencoderOptimiser:
         self.toggle_params_grad(self.autoencoder_params, False)
         self.toggle_params_grad(self.discriminator_params, True)
         self.optimiser_discriminator.zero_grad()
-        fake_minibatch = self.model(real_minibatch)
-        loss = self.model.calculate_discriminator_loss(real_minibatch, fake_minibatch)
+        loss = self.model(real_minibatch, Mode.PATCH_DISCRIMINATOR_LOSS)
         loss.backward()
         self.optimiser_discriminator.step()
 
         # Calculate lazy-R1 regularisation
         if self.discriminator_iterations % self.r1_every == 0:
             self.optimiser_discriminator.zero_grad()
-            r1_loss = self.model.calculate_r1_losses(real_minibatch)
+            r1_loss = self.model(real_minibatch, Mode.R1_LOSS)
             r1_loss *= self.r1_every
             r1_loss.backward()
             self.optimiser_discriminator.step()
@@ -54,17 +54,24 @@ def train(iterations: int, data_loader: DataLoader):
     optimiser = AutoencoderOptimiser()
 
     training_discriminator = False
-    for _ in range(iterations):
+    for i in range(iterations):
         real_minibatch = next(iter(data_loader))
         if training_discriminator:
             optimiser.train_discriminator_step(real_minibatch)
         else:
             optimiser.train_generator_step(real_minibatch)
         training_discriminator = not training_discriminator
-    raise NotImplementedError()
+
+        # if i % 480 == 0:
+        # TODO print current losses/metrics
+        # if i % 50000 == 0:
+        # TODO save model state and allow for re-loading of saved state (and number of iterations)
+        # TODO evaluate metrics of model
 
 
 if __name__ == '__main__':
-    dataset = load_data()
-    loader = create_data_loader(dataset)
+    image_crop_size = 256
+    num_GPUs = 1
+    dataset = load_data(filename="/data/something", image_crop_size=image_crop_size)
+    loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=num_GPUs, drop_last=True)
     train(iterations=25 * 1000 ** 2, data_loader=loader)
