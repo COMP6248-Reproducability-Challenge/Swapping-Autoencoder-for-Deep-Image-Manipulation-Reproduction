@@ -23,7 +23,6 @@ class AutoencoderOptimiser:
             p.requires_grad_(value)
 
     def train_generator_step(self, real_minibatch):
-        # Switch on autoencoder gradient and switch off discriminator
         self.toggle_params_grad(self.autoencoder_params, True)
         self.toggle_params_grad(self.discriminator_params, False)
         self.optimiser_autoencoder.zero_grad()

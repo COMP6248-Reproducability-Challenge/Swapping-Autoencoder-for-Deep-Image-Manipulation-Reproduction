@@ -26,7 +26,7 @@ class SwappingAutoencoder(nn.Module):
         # self.encoder = Encoder()
         # self.generator = Generator()
         self.discriminator = RealismDiscriminator(image_crop_size)
-        self.patchDiscriminator = PatchDiscriminator()
+        self.patch_discriminator = PatchDiscriminator()
 
     def swap(self, images):
         """
@@ -58,8 +58,8 @@ class SwappingAutoencoder(nn.Module):
         #   I think this \/ the Non-saturating GAN loss (which they say they use) and this /\ is the minimax GAN loss?
         L_GAN_rec = -torch.log(self.discriminator(reconstructed)).view(N, -1).mean(dim=1)
         L_GAN_swap = -torch.log(self.discriminator(swapped)).view(N, -1).mean(dim=1)
-        L_co_occur_GAN = -torch.log(self.patchDiscriminator(get_random_patches(real_minibatch),
-                                                            get_random_patches(swapped))).view(N, -1).mean(dim=1)
+        L_co_occur_GAN = -torch.log(self.patch_discriminator(get_random_patches(real_minibatch),
+                                                             get_random_patches(swapped))).view(N, -1).mean(dim=1)
         # (?) code from paper uses 1.0 * L_GAN_swap
         return L_rec + 0.5 * L_GAN_rec + 0.5 * L_GAN_swap + L_co_occur_GAN
 
@@ -70,11 +70,11 @@ class SwappingAutoencoder(nn.Module):
         N = real_minibatch.size(0)  # batch_size
         reconstructed, swapped = self.generate_reconstructed_and_swapped(real_minibatch)
         # patch_disc estimate of whether the real image patches co-occur with themselves
-        co_occurrence_real = self.patchDiscriminator(get_random_patches(real_minibatch),
-                                                     get_random_patches(real_minibatch))
+        co_occurrence_real = self.patch_discriminator(get_random_patches(real_minibatch),
+                                                      get_random_patches(real_minibatch))
         # patch_disc estimate of whether the fake image patches co-occur with the real ones
-        co_occurrence_swapped = self.patchDiscriminator(get_random_patches(swapped),
-                                                        get_random_patches(real_minibatch))
+        co_occurrence_swapped = self.patch_discriminator(get_random_patches(swapped),
+                                                         get_random_patches(real_minibatch))
         L_real = -torch.log(co_occurrence_real).view(N, -1).mean(dim=1)
         L_swapped = -torch.log(1 - co_occurrence_swapped).view(N, -1).mean(dim=1)
         # TODO I think they also add in the image (GAN) discriminator losses as well?
@@ -88,7 +88,7 @@ class SwappingAutoencoder(nn.Module):
         raise NotImplementedError()
 
     def get_discriminator_params(self):
-        return self.patchDiscriminator.parameters()
+        return list(self.patch_discriminator.parameters()) + list(self.discriminator.parameters())
 
     def get_autoencoder_params(self):
         raise list(self.generator.parameters()) + list(self.encoder.parameters())
