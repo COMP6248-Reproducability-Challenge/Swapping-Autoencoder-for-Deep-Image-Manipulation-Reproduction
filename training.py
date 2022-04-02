@@ -8,11 +8,11 @@ from swapping_autoencoder import SwappingAutoencoder, ForwardMode as Mode
 class AutoencoderOptimiser:
     def __init__(self):
         self.model = SwappingAutoencoder()
-        self.discriminator_params = self.model.get_discriminator_params()
         self.autoencoder_params = self.model.get_autoencoder_params()
-        self.optimiser_autoencoder = optim.Adam(self.discriminator_params, lr=0.002, betas=(0.0, 0.99))
+        self.optimiser_autoencoder = optim.Adam(self.autoencoder_params, lr=0.002, betas=(0.0, 0.99))
         self.r1_every = 16
-        self.optimiser_discriminator = optim.Adam(self.autoencoder_params,
+        self.discriminator_params = self.model.get_discriminator_params()
+        self.optimiser_discriminator = optim.Adam(self.discriminator_params,
                                                   lr=0.002 * self.r1_every / (1 + self.r1_every),
                                                   betas=(0.0, 0.99))
         self.discriminator_iterations = 0

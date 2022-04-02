@@ -29,7 +29,17 @@ class SwappingAutoencoder(nn.Module):
         self.patchDiscriminator = PatchDiscriminator()
 
     def swap(self, images):
-        raise NotImplementedError()
+        """
+            :param images: minibatch of images to swap
+            :return: the minibatch with each subsequent pair of images swapped in position
+                     E.g. [0, 1, 2, 3, 4, 5] -> [1, 0, 3, 2, 5, 4]
+        """
+        N, *image_shape = images.shape  # batch_size, image_shape[]
+        assert N % 2 == 0
+        new_shape = [N // 2, 2, *image_shape]
+        images = images.view(*new_shape)
+        images = torch.flip(images, [1])
+        return images.view(N, *image_shape)
 
     def generate_reconstructed_and_swapped(self, real_minibatch):
         N = real_minibatch.size(0)  # batch_size
@@ -59,14 +69,15 @@ class SwappingAutoencoder(nn.Module):
         """
         N = real_minibatch.size(0)  # batch_size
         reconstructed, swapped = self.generate_reconstructed_and_swapped(real_minibatch)
-        # patch_disc estimate of whether the real image is real
+        # patch_disc estimate of whether the real image patches co-occur with themselves
         co_occurrence_real = self.patchDiscriminator(get_random_patches(real_minibatch),
                                                      get_random_patches(real_minibatch))
-        # patch_disc estimate of whether the fake image is real
-        co_occurrence_swapped = self.patchDiscriminator(get_random_patches(real_minibatch),
-                                                        get_random_patches(swapped))
+        # patch_disc estimate of whether the fake image patches co-occur with the real ones
+        co_occurrence_swapped = self.patchDiscriminator(get_random_patches(swapped),
+                                                        get_random_patches(real_minibatch))
         L_real = -torch.log(co_occurrence_real).view(N, -1).mean(dim=1)
         L_swapped = -torch.log(1 - co_occurrence_swapped).view(N, -1).mean(dim=1)
+        # TODO I think they also add in the image (GAN) discriminator losses as well?
         return L_real + L_swapped
 
     def calculate_r1_loss(self, real_minibatch):
