@@ -116,7 +116,7 @@ class SwappingAutoencoder(nn.Module):
         )
         grad_patch_square = 0.5 * grad_patch_real.pow(2) + 0.5 * grad_patch_target.pow(2)
         # Not 100% on this mean calculation, the author's code uses a summation over a list of dimensions
-        R1_patch = lambda_discriminator / 2 * grad_patch_square.mean()
+        R1_patch = lambda_patch / 2 * grad_patch_square.mean()
 
         return R1_discriminator + R1_patch
 
