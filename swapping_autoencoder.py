@@ -60,8 +60,9 @@ class SwappingAutoencoder(nn.Module):
         L_GAN_swap = -torch.log(self.discriminator(swapped)).view(N, -1).mean(dim=1)
         L_co_occur_GAN = -torch.log(self.patch_discriminator(get_random_patches(real_minibatch),
                                                              get_random_patches(swapped))).view(N, -1).mean(dim=1)
-        # (?) code from paper uses 1.0 * L_GAN_swap
-        return L_rec + 0.5 * L_GAN_rec + 0.5 * L_GAN_swap + L_co_occur_GAN
+        # (?) author's code uses 1.0 * L_GAN_swap but I'm pretty sure that's an error as it doesn't match the paper
+        L_GAN = 0.5 * L_GAN_rec + 0.5 * L_GAN_swap
+        return L_rec + L_GAN + L_co_occur_GAN
 
     def calculate_patch_discriminator_loss(self, real_minibatch):
         """
@@ -75,17 +76,49 @@ class SwappingAutoencoder(nn.Module):
         # patch_disc estimate of whether the fake image patches co-occur with the real ones
         co_occurrence_swapped = self.patch_discriminator(get_random_patches(swapped),
                                                          get_random_patches(real_minibatch))
-        L_real = -torch.log(co_occurrence_real).view(N, -1).mean(dim=1)
-        L_swapped = -torch.log(1 - co_occurrence_swapped).view(N, -1).mean(dim=1)
-        # TODO I think they also add in the image (GAN) discriminator losses as well?
-        return L_real + L_swapped
+        L_patch_real = -torch.log(co_occurrence_real).view(N, -1).mean(dim=1)
+        L_patch_swapped = -torch.log(1 - co_occurrence_swapped).view(N, -1).mean(dim=1)
+
+        L_GAN_real = -torch.log(self.discriminator(reconstructed)).view(N, -1).mean(dim=1)
+        L_GAN_rec = -torch.log(1 - self.discriminator(reconstructed)).view(N, -1).mean(dim=1)
+        L_GAN_swap = -torch.log(1 - self.discriminator(swapped)).view(N, -1).mean(dim=1)
+        L_GAN_fake = 0.5 * L_GAN_rec + 0.5 * L_GAN_swap
+
+        return L_patch_real + L_patch_swapped + L_GAN_real + L_GAN_fake
 
     def calculate_r1_loss(self, real_minibatch):
         """
             Loss for R1 regularisation of patch discriminator
+
+            R1 term function from https://arxiv.org/pdf/1801.04406.pdf Section 4.1 Eq. 9
         """
-        # TODO see StyleGAN2 (?)
-        raise NotImplementedError()
+        lambda_discriminator = 10.0
+        lambda_patch = 1.0
+
+        real_minibatch.requires_grad_(True)
+        # d_discriminator/d_real
+        grad_disc_real, = torch.autograd.grad(
+            outputs=self.discriminator(real_minibatch).sum(),
+            inputs=[real_minibatch]
+        )
+        grad_disc_square = grad_disc_real.pow(2)
+        # Not 100% on this mean calculation, the author's code uses a summation over a list of dimensions
+        R1_discriminator = lambda_discriminator / 2 * grad_disc_square.mean()
+
+        real_patches = get_random_patches(real_minibatch)
+        real_patches.requires_grad_(True)
+        target_patches = get_random_patches(real_minibatch)
+        target_patches.requires_grad_(True)
+        # d_patch/d_real_patches and d_patch/d_target_patches
+        grad_patch_real, grad_patch_target = torch.autograd.grad(
+            outputs=self.patch_discriminator(target_patches, real_patches).sum(),
+            inputs=[real_patches, target_patches]
+        )
+        grad_patch_square = 0.5 * grad_patch_real.pow(2) + 0.5 * grad_patch_target.pow(2)
+        # Not 100% on this mean calculation, the author's code uses a summation over a list of dimensions
+        R1_patch = lambda_discriminator / 2 * grad_patch_square.mean()
+
+        return R1_discriminator + R1_patch
 
     def get_discriminator_params(self):
         return list(self.patch_discriminator.parameters()) + list(self.discriminator.parameters())
