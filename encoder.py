@@ -25,7 +25,7 @@ class Encoder(torch.nn.Module):
 
         # Creating the Downsampling Res-Blocks in loop
         resblocks = []
-        for i in range(1, no_downsamples + 1):
+        for i in range(no_downsamples):
             out_channels = n_channels * (2 ** 1)
             resblocks.append(ResBlock(n_channels, out_channels))
             n_channels = out_channels
@@ -34,13 +34,12 @@ class Encoder(torch.nn.Module):
         self.DownSample = nn.Sequential(*resblocks)
 
         # TODO check parameters for structure and texture branches.
-        #   Not sure if they are detaled in the paper, but I'm copying the implementation of their code
+        #   Not sure if they are detailed in the paper, but I'm copying the implementation of their code
         # Structure branch
         self.structure = nn.Sequential(
             ConvLayer(n_channels, n_channels, 1),
             ConvLayer(n_channels, structure_channels, 1, activate=False)
-            # TODO activate=False in their implementation,
-            #   but not sure if it says in paper
+            #   activate=False removes the relu from the conv layer
         )
 
         # Texture Branch
