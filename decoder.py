@@ -1,17 +1,16 @@
 import math
+
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
+
 from stylegan2_pytorch.stylegan2_model import ConvLayer, EqualLinear, ToRGB, StyledConv
-
-
-# Spatial Code refers to the Structure Code, and
-# Global Code refers to the Texture Code of the paper.
-
-
 # Initially implemented with two methods - as in taesungp version - but condensed into 1 -
 #   I think they should both work the same
 from taesung_data_loading.util import normalize
+
+# Spatial Code refers to the Structure Code, and
+# Global Code refers to the Texture Code of the paper.
 
 '''
 class ResPreservingResnet(torch.nn.Module):
@@ -48,12 +47,14 @@ class UpsamplingResnet(torch.nn.Module):
         return (skip + res) / math.sqrt(2)
 '''
 
+
 class TextureResBlock(torch.nn.Module):  # TODO - check that this is the same as the two above!
     def __init__(self, in_ch, out_ch, texture_dim, upsample, blur_kernel=(1, 3, 3, 1), noise=None):
         super().__init__()
 
         self.upsample = upsample
-        self.conv1 = StyledConv(in_ch, out_ch, 3, texture_dim, upsample=upsample, blur_kernel=blur_kernel)  # TODO don't get the parameters, just copying theirs
+        self.conv1 = StyledConv(in_ch, out_ch, 3, texture_dim, upsample=upsample,
+                                blur_kernel=blur_kernel)  # TODO don't get the parameters, just copying theirs
         self.conv2 = StyledConv(out_ch, out_ch, 3, texture_dim)
 
         if in_ch == out_ch:

@@ -67,8 +67,10 @@ def train(iterations: int, data_loader: DataLoader, image_crop_size: int):
         # TODO save model state and allow for re-loading of saved state (and number of iterations)
         # TODO evaluate metrics of model
 
+
 def save_train_state():
     raise NotImplementedError()
+
 
 if __name__ == '__main__':
     print("Starting...")

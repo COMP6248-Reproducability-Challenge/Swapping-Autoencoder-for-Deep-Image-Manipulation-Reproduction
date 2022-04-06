@@ -6,7 +6,6 @@ from torch import nn
 from decoder import Decoder
 from encoder import Encoder
 from patch_discriminator import PatchDiscriminator, get_random_patches
-
 from stylegan2_pytorch.stylegan2_model import Discriminator as RealismDiscriminator
 
 

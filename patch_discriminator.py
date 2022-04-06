@@ -1,6 +1,8 @@
 import math
+
 import torch
 from torch import nn
+
 from stylegan2_pytorch.stylegan2_model import ConvLayer, ResBlock, EqualLinear
 
 
