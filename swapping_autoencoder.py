@@ -3,11 +3,11 @@ from enum import Enum
 import torch
 from torch import nn
 
+from decoder import Decoder
+from encoder import Encoder
 from patch_discriminator import PatchDiscriminator, get_random_patches
 
 from stylegan2_pytorch.stylegan2_model import Discriminator as RealismDiscriminator
-
-from training import image_crop_size
 
 
 class ForwardMode(Enum):
@@ -21,10 +21,10 @@ class SwappingAutoencoder(nn.Module):
         Swapping autoencoder
     """
 
-    def __init__(self):
+    def __init__(self, image_crop_size):
         super().__init__()
-        # self.encoder = Encoder()
-        # self.generator = Generator()
+        self.encoder = Encoder()
+        self.generator = Decoder()
         self.discriminator = RealismDiscriminator(image_crop_size)
         self.patch_discriminator = PatchDiscriminator()
 
@@ -124,7 +124,7 @@ class SwappingAutoencoder(nn.Module):
         return list(self.patch_discriminator.parameters()) + list(self.discriminator.parameters())
 
     def get_autoencoder_params(self):
-        raise list(self.generator.parameters()) + list(self.encoder.parameters())
+        return list(self.generator.parameters()) + list(self.encoder.parameters())
 
     def forward(self, real_minibatch, mode: ForwardMode):
         if mode == ForwardMode.AUTOENCODER_LOSS:

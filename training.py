@@ -1,13 +1,13 @@
 from torch import optim
 from torch.utils.data import DataLoader
 
-from data_loading import load_data
+from data_loading import load_church_data
 from swapping_autoencoder import SwappingAutoencoder, ForwardMode as Mode
 
 
 class AutoencoderOptimiser:
-    def __init__(self):
-        self.model = SwappingAutoencoder()
+    def __init__(self, image_crop_size):
+        self.model = SwappingAutoencoder(image_crop_size)
         self.autoencoder_params = self.model.get_autoencoder_params()
         self.optimiser_autoencoder = optim.Adam(self.autoencoder_params, lr=0.002, betas=(0.0, 0.99))
         self.r1_every = 16
@@ -49,12 +49,12 @@ class AutoencoderOptimiser:
         self.discriminator_iterations += 1
 
 
-def train(iterations: int, data_loader: DataLoader):
-    optimiser = AutoencoderOptimiser()
+def train(iterations: int, data_loader: DataLoader, image_crop_size: int):
+    optimiser = AutoencoderOptimiser(image_crop_size)
 
     training_discriminator = False
     for i in range(iterations):
-        real_minibatch = next(iter(data_loader))
+        real_minibatch = next(iter(data_loader))["real_A"]
         if training_discriminator:
             optimiser.train_discriminator_step(real_minibatch)
         else:
@@ -69,8 +69,10 @@ def train(iterations: int, data_loader: DataLoader):
 
 
 if __name__ == '__main__':
+    print("Starting...")
     image_crop_size = 256
-    num_GPUs = 1
-    dataset = load_data(filename="/data/something", image_crop_size=image_crop_size)
-    loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=num_GPUs, drop_last=True)
-    train(iterations=25 * 1000 ** 2, data_loader=loader)
+    print("Loading dataset")
+    data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=16, num_gpus=0)
+    print("Dataset loaded")
+    print("Starting training...")
+    train(iterations=25 * 1000 ** 2, data_loader=data_loader, image_crop_size=image_crop_size)

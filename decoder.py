@@ -11,6 +11,8 @@ from stylegan2_pytorch.stylegan2_model import ConvLayer, EqualLinear, ToRGB, Sty
 
 # Initially implemented with two methods - as in taesungp version - but condensed into 1 -
 #   I think they should both work the same
+from taesung_data_loading.util import normalize
+
 '''
 class ResPreservingResnet(torch.nn.Module):
     def __init__(self, in_ch, out_ch, texture_dim):
@@ -86,7 +88,7 @@ class GeneratorTexturalModulation(torch.nn.Module):
             return x * (1 * self.scale(style)) + self.bias(style)
 
 
-class Dencoder(torch.nn.Module):
+class Decoder(torch.nn.Module):
 
     # ToDo - check which of these params to take in and which to hardcode
     #  Also complaining about blur_kernel being mutable
@@ -94,7 +96,7 @@ class Dencoder(torch.nn.Module):
     def __init__(self,
                  channel=32,
                  structure_channels=8,
-                 texture_channels=2084,
+                 texture_channels=2048,
                  ch_multiplier=(4, 8, 12, 16, 16, 16, 8, 4),
                  upsample=(False, False, False, False, True, True, True, True, True),
                  blur_kernel=[1, 3, 3, 1],
@@ -115,8 +117,8 @@ class Dencoder(torch.nn.Module):
         self.to_rgb = ToRGB(in_ch, structure_channels, blur_kernel=blur_kernel)
 
     def forward(self, structure_code, texture_code):
-        structure_code = self.normalize(structure_code)
-        texture_code = self.normalize(texture_code)
+        structure_code = normalize(structure_code)
+        texture_code = normalize(texture_code)
 
         # First modulation
         out = self.TexturalModulation(structure_code, texture_code)
@@ -126,12 +128,5 @@ class Dencoder(torch.nn.Module):
             out = layer(out, texture_code)
 
         # To rgb
-        out = self.to_rgb(out)
+        out = self.to_rgb(out, texture_code)
         return out
-
-
-# Taken directly from their util.py
-def normalise(v):
-    if type(v) == list:
-        return [normalise(vv) for vv in v]
-    return v * torch.rsqrt((torch.sum(v ** 2, dim=1, keepdim=True) + 1e-8))

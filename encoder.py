@@ -47,7 +47,7 @@ class Encoder(torch.nn.Module):
             ConvLayer(n_channels, n_channels*2, 3, downsample=True, blur_kernel=[1]),
             ConvLayer(n_channels * 2, n_channels * 4, 3, downsample=True, blur_kernel=[1]),
             nn.AdaptiveAvgPool2d(1),
-            nn.EqualLinear(n_channels * 4, n_channels * 4)
+            EqualLinear(n_channels * 4, n_channels * 4)
         )
 
     def forward(self, x):
