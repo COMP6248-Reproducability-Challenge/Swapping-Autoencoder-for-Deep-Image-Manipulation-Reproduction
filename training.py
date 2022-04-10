@@ -1,4 +1,5 @@
 from torch import optim
+from torch import save, load
 from torch.utils.data import DataLoader
 
 from data_loading import load_church_data
@@ -68,8 +69,15 @@ def train(iterations: int, data_loader: DataLoader, image_crop_size: int):
         # TODO evaluate metrics of model
 
 
-def save_train_state():
-    raise NotImplementedError()
+def save_train_state(optimiser: AutoencoderOptimiser):
+    save(optimiser.model.state_dict(), './saves/optimiser.pt')
+
+
+def load_train_state(crop_size: int):
+    state_dict = load('./saves/optimiser.pt')
+    new = AutoencoderOptimiser(crop_size)
+    new.model.load_state_dict(state_dict)
+    return new
 
 
 if __name__ == '__main__':
