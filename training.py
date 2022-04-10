@@ -52,8 +52,11 @@ class AutoencoderOptimiser:
         self.discriminator_iterations += 1
 
 
-def train(iterations: int, data_loader: DataLoader, image_crop_size: int):
-    optimiser = AutoencoderOptimiser(image_crop_size)
+def train(iterations: int, data_loader: DataLoader, image_crop_size: int, load_state=False):
+    if load_state:
+        optimiser = load_train_state(image_crop_size)
+    else:
+        optimiser = AutoencoderOptimiser(image_crop_size)
 
     training_discriminator = False
     for i in range(iterations):
@@ -66,8 +69,8 @@ def train(iterations: int, data_loader: DataLoader, image_crop_size: int):
 
         # if i % 480 == 0:
         # TODO print current losses/metrics
-        # if i % 50000 == 0:
-        # TODO save model state and allow for re-loading of saved state (and number of iterations)
+        if i % 50000 == 0:
+            save_train_state(optimiser)
         # TODO evaluate metrics of model
 
 
@@ -81,6 +84,7 @@ def load_train_state(crop_size: int):
         state_dict = load('./saves/optimiser.pt')
     except Exception:
         logging.exception("An error occurred whilst loading ./saves/optimiser.pt (has it been saved?)")
+        return new
 
     try:
         new.model.load_state_dict(state_dict)
