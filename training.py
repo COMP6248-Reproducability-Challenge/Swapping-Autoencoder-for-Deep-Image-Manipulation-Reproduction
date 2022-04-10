@@ -5,6 +5,8 @@ from torch.utils.data import DataLoader
 from data_loading import load_church_data
 from swapping_autoencoder import SwappingAutoencoder, ForwardMode as Mode
 
+import logging
+
 
 class AutoencoderOptimiser:
     def __init__(self, image_crop_size):
@@ -74,9 +76,17 @@ def save_train_state(optimiser: AutoencoderOptimiser):
 
 
 def load_train_state(crop_size: int):
-    state_dict = load('./saves/optimiser.pt')
     new = AutoencoderOptimiser(crop_size)
-    new.model.load_state_dict(state_dict)
+    try:
+        state_dict = load('./saves/optimiser.pt')
+    except Exception:
+        logging.exception("An error occurred whilst loading ./saves/optimiser.pt (has it been saved?)")
+
+    try:
+        new.model.load_state_dict(state_dict)
+    except Exception:
+        logging.exception("An error occurred whilst loading the state dictionary (is the model saved correctly?)")
+
     return new
 
 
