@@ -115,7 +115,7 @@ class Decoder(torch.nn.Module):
             in_ch = ch_mul * channel
 
         # Final layer to take it to RGB
-        self.to_rgb = ToRGB(in_ch, structure_channels, blur_kernel=blur_kernel)
+        self.to_rgb = ToRGB(in_ch, texture_channels, blur_kernel=blur_kernel)
 
     def forward(self, structure_code, texture_code):
         structure_code = normalize(structure_code)

@@ -55,8 +55,8 @@ class SwappingAutoencoder(nn.Module):
         L_rec = L1(reconstructed, real_minibatch[: N // 2])
         # (?) code from paper uses F.softplus(-D) where softplus(x) = log(1 + e^x)
         #   I think this \/ the Non-saturating GAN loss (which they say they use) and this /\ is the minimax GAN loss?
-        L_GAN_rec = -torch.log(self.discriminator(reconstructed)).view(N, -1).mean(dim=1)
-        L_GAN_swap = -torch.log(self.discriminator(swapped)).view(N, -1).mean(dim=1)
+        L_GAN_rec = -torch.log(self.discriminator(reconstructed)).view(N // 2, -1).mean(dim=1)
+        L_GAN_swap = -torch.log(self.discriminator(swapped)).view(N // 2, -1).mean(dim=1)
         L_co_occur_GAN = -torch.log(self.patch_discriminator(get_random_patches(real_minibatch),
                                                              get_random_patches(swapped))).view(N, -1).mean(dim=1)
         # (?) author's code uses 1.0 * L_GAN_swap but I'm pretty sure that's an error as it doesn't match the paper
@@ -79,8 +79,8 @@ class SwappingAutoencoder(nn.Module):
         L_patch_swapped = -torch.log(1 - co_occurrence_swapped).view(N, -1).mean(dim=1)
 
         L_GAN_real = -torch.log(self.discriminator(reconstructed)).view(N, -1).mean(dim=1)
-        L_GAN_rec = -torch.log(1 - self.discriminator(reconstructed)).view(N, -1).mean(dim=1)
-        L_GAN_swap = -torch.log(1 - self.discriminator(swapped)).view(N, -1).mean(dim=1)
+        L_GAN_rec = -torch.log(1 - self.discriminator(reconstructed)).view(N // 2, -1).mean(dim=1)
+        L_GAN_swap = -torch.log(1 - self.discriminator(swapped)).view(N // 2, -1).mean(dim=1)
         L_GAN_fake = 0.5 * L_GAN_rec + 0.5 * L_GAN_swap
 
         return L_patch_real + L_patch_swapped + L_GAN_real + L_GAN_fake
