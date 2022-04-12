@@ -1,8 +1,11 @@
 from torch import optim
+from torch import save, load
 from torch.utils.data import DataLoader
 
 from data_loading import load_church_data
 from swapping_autoencoder import SwappingAutoencoder, ForwardMode as Mode
+
+import logging
 
 
 class AutoencoderOptimiser:
@@ -49,8 +52,11 @@ class AutoencoderOptimiser:
         self.discriminator_iterations += 1
 
 
-def train(iterations: int, data_loader: DataLoader, image_crop_size: int):
-    optimiser = AutoencoderOptimiser(image_crop_size)
+def train(iterations: int, data_loader: DataLoader, image_crop_size: int, load_state=False):
+    if load_state:
+        optimiser = load_train_state(image_crop_size)
+    else:
+        optimiser = AutoencoderOptimiser(image_crop_size)
 
     training_discriminator = False
     for i in range(iterations):
@@ -63,13 +69,29 @@ def train(iterations: int, data_loader: DataLoader, image_crop_size: int):
 
         # if i % 480 == 0:
         # TODO print current losses/metrics
-        # if i % 50000 == 0:
-        # TODO save model state and allow for re-loading of saved state (and number of iterations)
+        if i % 50000 == 0:
+            save_train_state(optimiser)
         # TODO evaluate metrics of model
 
 
-def save_train_state():
-    raise NotImplementedError()
+def save_train_state(optimiser: AutoencoderOptimiser):
+    save(optimiser.model.state_dict(), './saves/optimiser.pt')
+
+
+def load_train_state(crop_size: int):
+    new = AutoencoderOptimiser(crop_size)
+    try:
+        state_dict = load('./saves/optimiser.pt')
+    except Exception:
+        logging.exception("An error occurred whilst loading ./saves/optimiser.pt (has it been saved?)")
+        return new
+
+    try:
+        new.model.load_state_dict(state_dict)
+    except Exception:
+        logging.exception("An error occurred whilst loading the state dictionary (is the model saved correctly?)")
+
+    return new
 
 
 if __name__ == '__main__':

@@ -3,6 +3,10 @@ import math
 import torch
 from torch import nn
 
+import numpy as np
+import cv2
+import random
+
 from stylegan2_pytorch.stylegan2_model import ConvLayer, ResBlock, EqualLinear
 
 
@@ -10,7 +14,27 @@ def get_random_patches(images, num_crops=8, patch_dim=128, min_scale=1 / 8, max_
     """
         Generate num_crops random patches from each image in images
     """
-    raise NotImplementedError()
+    crops = []
+    for image in images:
+        crop = []
+        for _ in range(num_crops):
+            mat = cv2.imread(image)
+            total_x, total_y, dims = mat.shape
+            resize = random.uniform(min_scale, max_scale)
+
+            size_x = math.floor(total_x * resize)
+            size_y = math.floor(total_y * resize)
+
+            offset_x = np.random.randint(total_x - size_x + 1)
+            offset_y = np.random.randint(total_y - size_y + 1)
+
+            mat = mat[offset_x:offset_x + size_x, offset_y:offset_y + size_y, :]
+            resized = cv2.resize(mat, (patch_dim, patch_dim))
+
+            crop.append(resized)
+        crops.append(crop)
+
+    return crops
 
 
 class PatchDiscriminator(nn.Module):
