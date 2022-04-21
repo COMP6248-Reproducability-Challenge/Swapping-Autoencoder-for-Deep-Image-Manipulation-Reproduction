@@ -78,7 +78,7 @@ class SwappingAutoencoder(nn.Module):
         L_patch_real = -torch.log(co_occurrence_real).view(N, -1).mean(dim=1)
         L_patch_swapped = -torch.log(1 - co_occurrence_swapped).view(N, -1).mean(dim=1)
 
-        L_GAN_real = -torch.log(self.discriminator(reconstructed)).view(N, -1).mean(dim=1)
+        L_GAN_real = -torch.log(self.discriminator(real_minibatch)).view(N, -1).mean(dim=1)
         L_GAN_rec = -torch.log(1 - self.discriminator(reconstructed)).view(N // 2, -1).mean(dim=1)
         L_GAN_swap = -torch.log(1 - self.discriminator(swapped)).view(N // 2, -1).mean(dim=1)
         L_GAN_fake = 0.5 * L_GAN_rec + 0.5 * L_GAN_swap
