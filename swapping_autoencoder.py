@@ -58,10 +58,11 @@ class SwappingAutoencoder(nn.Module):
         L_GAN_rec = -torch.log(self.discriminator(reconstructed)).view(N // 2, -1).mean(dim=1)
         L_GAN_swap = -torch.log(self.discriminator(swapped)).view(N // 2, -1).mean(dim=1)
         L_co_occur_GAN = -torch.log(self.patch_discriminator(get_random_patches(real_minibatch),
-                                                             get_random_patches(swapped))).view(N, -1).mean(dim=1)
+                                                             get_random_patches(swapped))).view(N // 2, -1).mean(dim=1)
         # (?) author's code uses 1.0 * L_GAN_swap but I'm pretty sure that's an error as it doesn't match the paper
         L_GAN = 0.5 * L_GAN_rec + 0.5 * L_GAN_swap
-        return L_rec + L_GAN + L_co_occur_GAN
+        batch_losses = L_rec + L_GAN + L_co_occur_GAN
+        return batch_losses.sum()
 
     def calculate_patch_discriminator_loss(self, real_minibatch):
         """
@@ -75,15 +76,16 @@ class SwappingAutoencoder(nn.Module):
         # patch_disc estimate of whether the fake image patches co-occur with the real ones
         co_occurrence_swapped = self.patch_discriminator(get_random_patches(swapped),
                                                          get_random_patches(real_minibatch))
-        L_patch_real = -torch.log(co_occurrence_real).view(N, -1).mean(dim=1)
-        L_patch_swapped = -torch.log(1 - co_occurrence_swapped).view(N, -1).mean(dim=1)
+        L_patch_real = -torch.log(co_occurrence_real).view(N // 2, -1).mean(dim=1)
+        L_patch_swapped = -torch.log(1 - co_occurrence_swapped).view(N // 2, -1).mean(dim=1)
 
-        L_GAN_real = -torch.log(self.discriminator(real_minibatch)).view(N, -1).mean(dim=1)
+        L_GAN_real = -torch.log(self.discriminator(real_minibatch)).view(N // 2, -1).mean(dim=1)
         L_GAN_rec = -torch.log(1 - self.discriminator(reconstructed)).view(N // 2, -1).mean(dim=1)
         L_GAN_swap = -torch.log(1 - self.discriminator(swapped)).view(N // 2, -1).mean(dim=1)
         L_GAN_fake = 0.5 * L_GAN_rec + 0.5 * L_GAN_swap
 
-        return L_patch_real + L_patch_swapped + L_GAN_real + L_GAN_fake
+        batch_losses = L_patch_real + L_patch_swapped + L_GAN_real + L_GAN_fake
+        return batch_losses.sum()
 
     def calculate_r1_loss(self, real_minibatch):
         """
@@ -117,7 +119,8 @@ class SwappingAutoencoder(nn.Module):
         # Not 100% on this mean calculation, the author's code uses a summation over a list of dimensions
         R1_patch = lambda_patch / 2 * grad_patch_square.mean()
 
-        return R1_discriminator + R1_patch
+        batch_losses = R1_discriminator + R1_patch
+        return batch_losses.sum()
 
     def get_discriminator_params(self):
         return list(self.patch_discriminator.parameters()) + list(self.discriminator.parameters())
