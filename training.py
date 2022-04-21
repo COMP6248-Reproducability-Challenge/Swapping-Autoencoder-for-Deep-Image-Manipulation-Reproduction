@@ -66,6 +66,7 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
             optimiser.train_discriminator_step(real_minibatch)
         else:
             optimiser.train_generator_step(real_minibatch)
+        print("Iter:", i, "complete. Trained discriminator:", training_discriminator),
         training_discriminator = not training_discriminator
 
         # if i % 480 == 0:
