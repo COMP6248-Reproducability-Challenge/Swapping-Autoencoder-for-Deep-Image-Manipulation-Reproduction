@@ -3,38 +3,15 @@ import math
 import torch
 from torch import nn
 
-import numpy as np
-import cv2
-import random
-
 from stylegan2_pytorch.stylegan2_model import ConvLayer, ResBlock, EqualLinear
+from taesung_data_loading.util import apply_random_crop
 
 
 def get_random_patches(images, num_crops=8, patch_dim=128, min_scale=1 / 8, max_scale=1 / 4):
     """
         Generate num_crops random patches from each image in images
     """
-    crops = []
-    for image in images:
-        crop = []
-        for _ in range(num_crops):
-            mat = image
-            dims, total_y, total_x = mat.shape
-            resize = random.uniform(min_scale, max_scale)
-
-            size_x = math.floor(total_x * resize)
-            size_y = math.floor(total_y * resize)
-
-            offset_x = np.random.randint(total_x - size_x + 1)
-            offset_y = np.random.randint(total_y - size_y + 1)
-
-            mat = mat[:, offset_y:offset_y + size_y, offset_x:offset_x + size_x]
-            resized = cv2.resize(mat, (patch_dim, patch_dim))
-
-            crop.append(resized)
-        crops.append(crop)
-
-    return crops
+    return apply_random_crop(images, patch_dim, (min_scale, max_scale), num_crops)
 
 
 class PatchDiscriminator(nn.Module):
@@ -86,26 +63,30 @@ class PatchDiscriminator(nn.Module):
         )
 
     # input_patch = fake generated patch
-    def forward(self, input_patch, reference_patches=None):
-        encoded_input = self.patchEncoder(input_patch)
-
-        if reference_patches is not None:
-            # Average encodings over reference_patches (possibly in batches)
-            # Not 100% sure this is correct but when it's integrated with real data that should let us know
-            b, n, *_ = reference_patches.size()
-            if reference_patches.ndim == 5:  # Batch of b sets of n patches (from b images)
-                flattened_patches = reference_patches.flatten(0, 1)
-            else:
-                flattened_patches = reference_patches
-            encoded_references = self.patchEncoder(flattened_patches)
-            _, c, h, w = encoded_references.size()
-            encoded_references = encoded_references.view(b, n, c, h, w)
-            mean_reference_encodings = encoded_references.mean(1)
-            combined_encoding = torch.cat((encoded_input.flatten(1), mean_reference_encodings.flatten(1)), 1)
+    def forward(self, input_patch, reference_patches):
+        # Average encodings over reference_patches (possibly in batches)
+        b, n, *_ = input_patch.size()
+        if input_patch.ndim == 5:  # Batch of b sets of n patches (from b images)
+            flattened_patches = input_patch.flatten(0, 1)
         else:
-            # Just for checking layer shapes not actual functionality
-            combined_encoding = torch.cat((encoded_input, encoded_input), 1)
+            flattened_patches = input_patch
+        encoded_inputs = self.patchEncoder(flattened_patches)
+        _, c, h, w = encoded_inputs.size()
+        encoded_inputs = encoded_inputs.view(b, n, c, h, w)
+        mean_input_encodings = encoded_inputs.mean(1)
 
+        # Average encodings over reference_patches (possibly in batches)
+        b, n, *_ = reference_patches.size()
+        if reference_patches.ndim == 5:  # Batch of b sets of n patches (from b images)
+            flattened_patches = reference_patches.flatten(0, 1)
+        else:
+            flattened_patches = reference_patches
+        encoded_references = self.patchEncoder(flattened_patches)
+        _, c, h, w = encoded_references.size()
+        encoded_references = encoded_references.view(b, n, c, h, w)
+        mean_reference_encodings = encoded_references.mean(1)
+
+        combined_encoding = torch.cat((mean_input_encodings.flatten(1), mean_reference_encodings.flatten(1)), 1)
         combined_encoding = torch.flatten(combined_encoding, 1)
         pred = self.predictor(combined_encoding)
         return pred

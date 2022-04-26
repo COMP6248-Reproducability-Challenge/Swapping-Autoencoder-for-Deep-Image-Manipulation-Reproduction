@@ -1,11 +1,12 @@
+import logging
+
+import torch
 from torch import optim
 from torch import save, load
-from torch.utils.data import DataLoader
 
 from data_loading import load_church_data
 from swapping_autoencoder import SwappingAutoencoder, ForwardMode as Mode
-
-import logging
+from taesung_data_loading import ConfigurableDataLoader
 
 
 class AutoencoderOptimiser:
@@ -52,7 +53,7 @@ class AutoencoderOptimiser:
         self.discriminator_iterations += 1
 
 
-def train(iterations: int, data_loader: DataLoader, image_crop_size: int, load_state=False):
+def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size: int, load_state=False):
     if load_state:
         optimiser = load_train_state(image_crop_size)
     else:
@@ -60,11 +61,12 @@ def train(iterations: int, data_loader: DataLoader, image_crop_size: int, load_s
 
     training_discriminator = False
     for i in range(iterations):
-        real_minibatch = next(iter(data_loader))["real_A"]
+        real_minibatch = next(data_loader)["real_A"]
         if training_discriminator:
             optimiser.train_discriminator_step(real_minibatch)
         else:
             optimiser.train_generator_step(real_minibatch)
+        print("Iter:", i, "complete. Trained discriminator:", training_discriminator),
         training_discriminator = not training_discriminator
 
         # if i % 480 == 0:
@@ -95,6 +97,7 @@ def load_train_state(crop_size: int):
 
 
 if __name__ == '__main__':
+    torch.multiprocessing.set_start_method('spawn')
     print("Starting...")
     image_crop_size = 256
     print("Loading dataset")
