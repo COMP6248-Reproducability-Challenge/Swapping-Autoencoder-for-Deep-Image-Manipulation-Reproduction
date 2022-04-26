@@ -98,7 +98,9 @@ class SwappingAutoencoder(nn.Module):
         # d_discriminator/d_real
         grad_disc_real, = torch.autograd.grad(
             outputs=self.discriminator(real_minibatch).sum(),
-            inputs=[real_minibatch]
+            inputs=[real_minibatch],
+            create_graph=True,
+            retain_graph=True
         )
         grad_disc_square = grad_disc_real.pow(2)
         # Not 100% on this mean calculation, the author's code uses a summation over a list of dimensions
@@ -111,7 +113,9 @@ class SwappingAutoencoder(nn.Module):
         # d_patch/d_real_patches and d_patch/d_target_patches
         grad_patch_real, grad_patch_target = torch.autograd.grad(
             outputs=self.patch_discriminator(target_patches, real_patches).sum(),
-            inputs=[real_patches, target_patches]
+            inputs=[real_patches, target_patches],
+            create_graph=True,
+            retain_graph=True
         )
         grad_patch_square = 0.5 * grad_patch_real.pow(2) + 0.5 * grad_patch_target.pow(2)
         # Not 100% on this mean calculation, the author's code uses a summation over a list of dimensions
