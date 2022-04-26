@@ -19,7 +19,7 @@ def load_church_data(image_crop_size, phase='train', batch_size=1, num_gpus=1) -
         batch_size=batch_size,
         num_gpus=num_gpus,
         # scales the image such that the short side is |load_size|, and crops a square window of |crop_size|.
-        load_size=256,
+        load_size=image_crop_size,
         crop_size=image_crop_size,
         shuffle_dataset=None,
         preprocess="scale_shortside_and_crop",

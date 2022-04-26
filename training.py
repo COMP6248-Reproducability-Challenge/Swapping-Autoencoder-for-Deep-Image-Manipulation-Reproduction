@@ -99,7 +99,7 @@ def load_train_state(crop_size: int):
 if __name__ == '__main__':
     torch.multiprocessing.set_start_method('spawn')
     print("Starting...")
-    image_crop_size = 256
+    image_crop_size = 64
     print("Loading dataset")
     data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=16, num_gpus=0)
     print("Dataset loaded")
