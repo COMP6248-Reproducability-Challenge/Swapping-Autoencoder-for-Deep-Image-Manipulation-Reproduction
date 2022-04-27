@@ -11,9 +11,11 @@ Now you can use the dataset class by specifying flag '--dataset_mode dummy'.
 See our template dataset class 'template_dataset.py' for more details.
 """
 import importlib
+
 import torch.utils.data
-from taesung_data_loading.base_dataset import BaseDataset
+
 import taesung_data_loading.util
+from taesung_data_loading.base_dataset import BaseDataset
 
 
 def find_dataset_using_name(dataset_name):
@@ -100,6 +102,7 @@ class ConfigurableDataLoader():
             shuffle=shuffle,
             num_workers=int(opt.num_gpus),
             drop_last=phase == "train",
+            generator=torch.Generator(device=opt.device)
         )
         #self.dataloader = dataset
         self.dataloader_iterator = iter(self.dataloader)

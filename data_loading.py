@@ -1,5 +1,7 @@
 import os
 
+import torch
+
 from taesung_data_loading import ConfigurableDataLoader
 
 
@@ -10,7 +12,8 @@ class DataLoadOptions:
 
 def load_church_data(image_crop_size, phase='train', batch_size=1, num_gpus=1) -> ConfigurableDataLoader:
     dirname = os.path.dirname(__file__)
-    filename = os.path.join(dirname, "..\CwkData\lsun\church_outdoor_train_lmdb")
+    filename = os.path.join(dirname, r"..\CwkData\lsun\church_outdoor_train_lmdb")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     options = DataLoadOptions(
         dataroot=filename,
         dataset_mode="lmdb",
@@ -24,6 +27,7 @@ def load_church_data(image_crop_size, phase='train', batch_size=1, num_gpus=1) -
         shuffle_dataset=None,
         preprocess="scale_shortside_and_crop",
         preprocess_crop_padding=None,
-        no_flip=True
+        no_flip=True,
+        device=device
     )
     return ConfigurableDataLoader(options)

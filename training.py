@@ -11,7 +11,7 @@ from taesung_data_loading import ConfigurableDataLoader
 
 class AutoencoderOptimiser:
     def __init__(self, image_crop_size):
-        self.model = SwappingAutoencoder(image_crop_size)
+        self.model = SwappingAutoencoder(image_crop_size).to(device)
         self.autoencoder_params = self.model.get_autoencoder_params()
         self.optimiser_autoencoder = optim.Adam(self.autoencoder_params, lr=0.002, betas=(0.0, 0.99))
         self.r1_every = 16
@@ -61,7 +61,7 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
 
     training_discriminator = False
     for i in range(iterations):
-        real_minibatch = next(data_loader)["real_A"]
+        real_minibatch = next(data_loader)["real_A"].to(device)
         if training_discriminator:
             optimiser.train_discriminator_step(real_minibatch)
         else:
@@ -97,11 +97,16 @@ def load_train_state(crop_size: int):
 
 
 if __name__ == '__main__':
+    if torch.cuda.is_available():
+        device = "cuda"
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    else:
+        device = "cpu"
     torch.multiprocessing.set_start_method('spawn')
     print("Starting...")
     image_crop_size = 64
     print("Loading dataset")
-    data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=16, num_gpus=0)
+    data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=1, num_gpus=0)
     print("Dataset loaded")
     print("Starting training...")
     train(iterations=25 * 1000 ** 2, data_loader=data_loader, image_crop_size=image_crop_size)
