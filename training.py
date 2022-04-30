@@ -61,7 +61,7 @@ class AutoencoderOptimiser:
         loss = self.model(real_minibatch, Mode.AUTOENCODER_LOSS).sum()
         loss.backward()
         self.optimiser_autoencoder.step()
-        return {"autoE_loss": loss}
+        return {"autoE": loss}
 
     def train_discriminator_step(self, real_minibatch):
         self.toggle_params_grad(self.autoencoder_params, False)
@@ -71,7 +71,7 @@ class AutoencoderOptimiser:
         loss.backward()
         self.optimiser_discriminator.step()
 
-        ret_losses = {"pathD_loss": loss}
+        ret_losses = {"patchD": loss}
         # Calculate lazy-R1 regularisation
         if self.discriminator_iterations % self.r1_every == 0:
             self.optimiser_discriminator.zero_grad()
@@ -79,7 +79,7 @@ class AutoencoderOptimiser:
             r1_loss *= self.r1_every
             r1_loss.backward()
             self.optimiser_discriminator.step()
-            ret_losses["disc_loss"] = r1_loss
+            ret_losses["disc"] = r1_loss
 
         self.discriminator_iterations += 1
 
@@ -109,10 +109,10 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
 
         if i % print_every == 0 or i % print_every == (print_every - 1):
             # Collect losses for the other model from the previous iteration
-            last_losses = last_losses | {("\t" + key): loss.item() for (key, loss) in losses.items()}
+            last_losses = last_losses | {key: loss.item() for (key, loss) in losses.items()}
 
         if i % print_every == 0:
-            print(f"{i}/{iterations}. \t\tTime:", datetime.now().strftime("%H:%M:%S"), "\tLosses:", losses)
+            print(f"{i}/{iterations}. \t\tTime:", datetime.now().strftime("%H:%M:%S"), "\tLosses:", last_losses)
             save_train_state(optimiser, i)
 
 
