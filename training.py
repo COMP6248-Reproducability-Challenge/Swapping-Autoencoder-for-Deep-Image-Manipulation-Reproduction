@@ -14,10 +14,10 @@ from taesung_data_loading import ConfigurableDataLoader
 class MultiGPUWrapper:
     def __init__(self, model: SwappingAutoencoder):
         if torch.cuda.device_count() > 1:
-            print("Initialising model for ", torch.cuda.device_count(), "GPUs!")
+            print("Initialising model for ", torch.cuda.device_count(), "GPUs!", flush=True)
             self.parallel_model = torch.nn.DataParallel(model).to(device)
         else:
-            print("Running on single device ", device)
+            print("Running on single device ", device, flush=True)
             self.parallel_model = model.to(device)
         self.model = model.to(device)
 
@@ -96,7 +96,7 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
     last_losses = {"autoE": "unknown", "patchD": "unknown", "disc": "unknown"}
     print_every = 50
 
-    print("Time:", datetime.now().strftime("%H:%M:%S"))
+    print("Time:", datetime.now().strftime("%H:%M:%S"), flush=True)
     training_discriminator = False
     for i in range(start_i, iterations):
         real_minibatch = next(data_loader)["real_A"].to(device)
@@ -112,7 +112,8 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
             last_losses = last_losses | {key: loss.item() for (key, loss) in losses.items()}
 
         if i % print_every == 0:
-            print(f"{i}/{iterations}. \t\tTime:", datetime.now().strftime("%H:%M:%S"), "\tLosses:", last_losses)
+            print(f"{i}/{iterations}. \t\tTime:", datetime.now().strftime("%H:%M:%S"), "\tLosses:", last_losses,
+                  flush=True)
             save_train_state(optimiser, i)
 
 
@@ -151,19 +152,19 @@ if __name__ == '__main__':
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
     else:
         device = "cpu"
-    print("Running on ", device)
+    print("Running on ", device, flush=True)
     torch.multiprocessing.set_start_method('spawn')
-    print("Starting...")
+    print("Starting...", flush=True)
     image_crop_size = 64
-    print("Loading dataset")
+    print("Loading dataset", flush=True)
     batch_size = 128
     data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=batch_size, num_gpus=0, device=device)
-    print("Dataset loaded")
-    print("Starting training from iteration ", start_i, "...")
+    print("Dataset loaded", flush=True)
+    print("Starting training from iteration ", start_i, "...", flush=True)
     load_state = bool(start_i != 0)
     if load_state:
-        print("Reloading training state from saves/optimiser.pt")
+        print("Reloading training state from saves/optimiser.pt", flush=True)
     else:
-        print("Re-initialising model")
+        print("Re-initialising model", flush=True)
     train(start_i=start_i, iterations=int(25 * 1000 ** 2 // batch_size), data_loader=data_loader,
           image_crop_size=image_crop_size, load_state=load_state)
