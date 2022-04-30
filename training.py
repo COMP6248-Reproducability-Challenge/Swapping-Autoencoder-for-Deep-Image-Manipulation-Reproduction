@@ -93,17 +93,25 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
     else:
         optimiser = AutoencoderOptimiser(image_crop_size)
 
+    last_losses = {"autoE": "unknown", "patchD": "unknown", "disc": "unknown"}
+    print_every = 50
+
     print("Time:", datetime.now().strftime("%H:%M:%S"))
     training_discriminator = False
     for i in range(start_i, iterations):
         real_minibatch = next(data_loader)["real_A"].to(device)
         if training_discriminator:
             losses = optimiser.train_discriminator_step(real_minibatch)
+            last_losses = last_losses | losses
         else:
             losses = optimiser.train_generator_step(real_minibatch)
         training_discriminator = not training_discriminator
 
-        if i % 100 == 0:
+        if i % print_every == 0 or i % print_every == (print_every - 1):
+            # Collect losses for the other model from the previous iteration
+            last_losses = last_losses | {"\t" + key: loss.item() for (key, loss) in losses}
+
+        if i % print_every == 0:
             print(f"{i}/{iterations}. \t\tTime:", datetime.now().strftime("%H:%M:%S"), "\tLosses:", losses)
             save_train_state(optimiser, i)
 
