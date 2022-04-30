@@ -13,10 +13,10 @@ class MultiGPUWrapper:
     def __init__(self, model: SwappingAutoencoder):
         if torch.cuda.device_count() > 1:
             print("Initialising model for ", torch.cuda.device_count(), "GPUs!")
-            self.model = torch.nn.DataParallel(model).to(device)
         else:
             print("Running on single device ", device)
-            self.model = model.to(device)
+        self.parallel_model = torch.nn.DataParallel(model).to(device)
+        self.model = model.to(device)
 
     def get_autoencoder_params(self):
         return self.model.get_autoencoder_params()
@@ -25,7 +25,7 @@ class MultiGPUWrapper:
         return self.model.get_discriminator_params()
 
     def __call__(self, *args, **kwargs):
-        return self.model(*args, **kwargs)
+        return self.parallel_model(*args, **kwargs)
 
     def state_dict(self):
         return self.model.state_dict()
