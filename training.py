@@ -107,6 +107,8 @@ def save_train_state(optimiser: AutoencoderOptimiser, i: int):
     save(optimiser.model.state_dict(), './saves/optimiser.pt')
     f = open("./saves/last_completed_iter.txt", "a")
     f.write(str(i))
+    f.write(str(i) + "\n")
+    f.close()
 
 
 def load_train_state(crop_size: int):
