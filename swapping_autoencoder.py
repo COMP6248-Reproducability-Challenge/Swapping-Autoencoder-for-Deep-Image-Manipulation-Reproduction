@@ -1,6 +1,7 @@
 from enum import Enum
 
 import torch
+import torch.nn.functional as F
 from torch import nn
 
 from decoder import Decoder
@@ -55,10 +56,13 @@ class SwappingAutoencoder(nn.Module):
         L_rec = L1(reconstructed, real_minibatch[: N // 2])
         # (?) code from paper uses F.softplus(-D) where softplus(x) = log(1 + e^x)
         #   I think this \/ the Non-saturating GAN loss (which they say they use) and this /\ is the minimax GAN loss?
-        L_GAN_rec = -torch.log(self.discriminator(reconstructed)).view(N // 2, -1).mean(dim=1)
-        L_GAN_swap = -torch.log(self.discriminator(swapped)).view(N // 2, -1).mean(dim=1)
-        L_co_occur_GAN = -torch.log(self.patch_discriminator(get_random_patches(real_minibatch),
-                                                             get_random_patches(swapped))).view(N // 2, -1).mean(dim=1)
+        #   Apparently -log sigmoid(f(x)) = log (1 + exp(-f(x))) = softplus(-f(x)), and in this case there is no
+        #   sigmoid on the discrimiator, so using the softplus will get around that?
+        #   (the modified generator update rule proposed by Goodfellow et al (2014))
+        L_GAN_rec = F.softplus(-self.discriminator(reconstructed)).view(N // 2, -1).mean(dim=1)
+        L_GAN_swap = F.softplus(-self.discriminator(swapped)).view(N // 2, -1).mean(dim=1)
+        L_co_occur_GAN = F.softplus(-self.patch_discriminator(get_random_patches(real_minibatch),
+                                                              get_random_patches(swapped))).view(N // 2, -1).mean(dim=1)
         # (?) author's code uses 1.0 * L_GAN_swap but I'm pretty sure that's an error as it doesn't match the paper
         L_GAN = 0.5 * L_GAN_rec + 0.5 * L_GAN_swap
         batch_losses = L_rec + L_GAN + L_co_occur_GAN
@@ -76,12 +80,12 @@ class SwappingAutoencoder(nn.Module):
         # patch_disc estimate of whether the fake image patches co-occur with the real ones
         co_occurrence_swapped = self.patch_discriminator(get_random_patches(swapped),
                                                          get_random_patches(real_minibatch))
-        L_patch_real = -torch.log(co_occurrence_real).view(N // 2, -1).mean(dim=1)
-        L_patch_swapped = -torch.log(1 - co_occurrence_swapped).view(N // 2, -1).mean(dim=1)
+        L_patch_real = F.softplus(-co_occurrence_real).view(N // 2, -1).mean(dim=1)
+        L_patch_swapped = F.softplus(co_occurrence_swapped).view(N // 2, -1).mean(dim=1)
 
-        L_GAN_real = -torch.log(self.discriminator(real_minibatch)).view(N // 2, -1).mean(dim=1)
-        L_GAN_rec = -torch.log(1 - self.discriminator(reconstructed)).view(N // 2, -1).mean(dim=1)
-        L_GAN_swap = -torch.log(1 - self.discriminator(swapped)).view(N // 2, -1).mean(dim=1)
+        L_GAN_real = F.softplus(-self.discriminator(real_minibatch)).view(N // 2, -1).mean(dim=1)
+        L_GAN_rec = F.softplus(self.discriminator(reconstructed)).view(N // 2, -1).mean(dim=1)
+        L_GAN_swap = F.softplus(self.discriminator(swapped)).view(N // 2, -1).mean(dim=1)
         L_GAN_fake = 0.5 * L_GAN_rec + 0.5 * L_GAN_swap
 
         batch_losses = L_patch_real + L_patch_swapped + L_GAN_real + L_GAN_fake

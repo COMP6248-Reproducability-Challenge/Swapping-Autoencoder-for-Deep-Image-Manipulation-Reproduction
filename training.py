@@ -1,4 +1,5 @@
 import logging
+import sys
 from datetime import datetime
 
 import torch
@@ -14,9 +15,10 @@ class MultiGPUWrapper:
     def __init__(self, model: SwappingAutoencoder):
         if torch.cuda.device_count() > 1:
             print("Initialising model for ", torch.cuda.device_count(), "GPUs!")
+            self.parallel_model = torch.nn.DataParallel(model).to(device)
         else:
             print("Running on single device ", device)
-        self.parallel_model = torch.nn.DataParallel(model).to(device)
+            self.parallel_model = model.to(device)
         self.model = model.to(device)
 
     def get_autoencoder_params(self):
@@ -84,7 +86,8 @@ class AutoencoderOptimiser:
         return ret_losses
 
 
-def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size: int, load_state=False):
+def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size: int, start_i: int = 0,
+          load_state=False):
     if load_state:
         optimiser = load_train_state(image_crop_size)
     else:
@@ -92,7 +95,7 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
 
     print("Time:", datetime.now().strftime("%H:%M:%S"))
     training_discriminator = False
-    for i in range(iterations):
+    for i in range(start_i, iterations):
         real_minibatch = next(data_loader)["real_A"].to(device)
         if training_discriminator:
             losses = optimiser.train_discriminator_step(real_minibatch)
@@ -100,6 +103,7 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
             losses = optimiser.train_generator_step(real_minibatch)
         training_discriminator = not training_discriminator
 
+        print(f"{i}/{iterations}. \t\tTime:", datetime.now().strftime("%H:%M:%S"), "\tLosses:", losses)
         if i % 100 == 0:
             print(f"{i}/{iterations}. \t\tTime:", datetime.now().strftime("%H:%M:%S"), "\tLosses:", losses)
             save_train_state(optimiser, i)
@@ -129,6 +133,11 @@ def load_train_state(crop_size: int):
 
 
 if __name__ == '__main__':
+    argv = sys.argv
+    if len(argv) != 2:
+        print("Usage python training.py iter_start")
+        sys.exit(2)
+    _, start_i = argv
     if torch.cuda.is_available():
         device = "cuda"
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -142,5 +151,11 @@ if __name__ == '__main__':
     batch_size = 128
     data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=batch_size, num_gpus=0, device=device)
     print("Dataset loaded")
-    print("Starting training...")
-    train(iterations=int(25 * 1000 ** 2 // batch_size), data_loader=data_loader, image_crop_size=image_crop_size)
+    print("Starting training from iteration ", start_i, "...")
+    load_state = (start_i == 0)
+    if load_state:
+        print("Reloading training state from saves/optimiser.pt")
+    else:
+        print("Re-initialising model")
+    train(start_i=start_i, iterations=int(25 * 1000 ** 2 // batch_size), data_loader=data_loader,
+          image_crop_size=image_crop_size, load_state=load_state)
