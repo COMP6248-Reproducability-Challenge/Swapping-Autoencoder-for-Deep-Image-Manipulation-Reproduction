@@ -138,6 +138,7 @@ if __name__ == '__main__':
         print("Usage python training.py iter_start")
         sys.exit(2)
     _, start_i = argv
+    start_i = int(start_i)
     if torch.cuda.is_available():
         device = "cuda"
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
