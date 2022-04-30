@@ -11,7 +11,12 @@ from taesung_data_loading import ConfigurableDataLoader
 
 class AutoencoderOptimiser:
     def __init__(self, image_crop_size):
-        self.model = SwappingAutoencoder(image_crop_size).to(device)
+        if torch.cuda.device_count() > 1:
+            print("Initialising model for ", torch.cuda.device_count(), "GPUs!")
+            self.model = torch.nn.DataParallel(SwappingAutoencoder(image_crop_size)).to(device)
+        else:
+            print("Running on single device ", device)
+            self.model = SwappingAutoencoder(image_crop_size).to(device)
         self.autoencoder_params = self.model.get_autoencoder_params()
         self.optimiser_autoencoder = optim.Adam(self.autoencoder_params, lr=0.002, betas=(0.0, 0.99))
         self.r1_every = 16
@@ -52,6 +57,8 @@ class AutoencoderOptimiser:
 
         self.discriminator_iterations += 1
 
+        return {"patchD_loss"}
+
 
 def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size: int, load_state=False):
     if load_state:
@@ -71,13 +78,15 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
 
         # if i % 480 == 0:
         # TODO print current losses/metrics
-        if i % 50000 == 0:
-            save_train_state(optimiser)
+        if i % 100 == 0:
+            save_train_state(optimiser, i)
         # TODO evaluate metrics of model
 
 
-def save_train_state(optimiser: AutoencoderOptimiser):
+def save_train_state(optimiser: AutoencoderOptimiser, i: int):
     save(optimiser.model.state_dict(), './saves/optimiser.pt')
+    f = open("./saves/last_completed_iter.txt", "a")
+    f.write(str(i))
 
 
 def load_train_state(crop_size: int):
@@ -102,11 +111,14 @@ if __name__ == '__main__':
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
     else:
         device = "cpu"
+    print("Running on ", device)
     torch.multiprocessing.set_start_method('spawn')
     print("Starting...")
     image_crop_size = 64
     print("Loading dataset")
-    data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=16, num_gpus=0)
+    print("Loading data with ", torch.cuda.device_count(), "GPU workers")
+    data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=16, num_gpus=torch.cuda.device_count(),
+                                   device=device)
     print("Dataset loaded")
     print("Starting training...")
     train(iterations=25 * 1000 ** 2, data_loader=data_loader, image_crop_size=image_crop_size)
