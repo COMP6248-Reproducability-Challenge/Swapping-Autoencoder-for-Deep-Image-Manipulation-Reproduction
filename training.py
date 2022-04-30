@@ -136,9 +136,7 @@ if __name__ == '__main__':
     print("Starting...")
     image_crop_size = 64
     print("Loading dataset")
-    print("Loading data with ", torch.cuda.device_count(), "GPU workers")
-    data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=16, num_gpus=torch.cuda.device_count(),
-                                   device=device)
+    data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=16, num_gpus=0, device=device)
     print("Dataset loaded")
     print("Starting training...")
     train(iterations=25 * 1000 ** 2, data_loader=data_loader, image_crop_size=image_crop_size)
