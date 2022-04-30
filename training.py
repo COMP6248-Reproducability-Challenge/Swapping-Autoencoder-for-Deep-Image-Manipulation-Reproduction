@@ -109,7 +109,7 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
 
         if i % print_every == 0 or i % print_every == (print_every - 1):
             # Collect losses for the other model from the previous iteration
-            last_losses = last_losses | {"\t" + key: loss.item() for (key, loss) in losses}
+            last_losses = last_losses | {("\t" + key): loss.item() for (key, loss) in losses.items()}
 
         if i % print_every == 0:
             print(f"{i}/{iterations}. \t\tTime:", datetime.now().strftime("%H:%M:%S"), "\tLosses:", losses)
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=batch_size, num_gpus=0, device=device)
     print("Dataset loaded")
     print("Starting training from iteration ", start_i, "...")
-    load_state = bool(start_i == 0)
+    load_state = bool(start_i != 0)
     if load_state:
         print("Reloading training state from saves/optimiser.pt")
     else:
