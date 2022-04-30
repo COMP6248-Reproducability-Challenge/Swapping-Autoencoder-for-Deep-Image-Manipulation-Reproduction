@@ -55,7 +55,7 @@ class AutoencoderOptimiser:
         self.toggle_params_grad(self.autoencoder_params, True)
         self.toggle_params_grad(self.discriminator_params, False)
         self.optimiser_autoencoder.zero_grad()
-        loss = self.model(real_minibatch, Mode.AUTOENCODER_LOSS)
+        loss = self.model(real_minibatch, Mode.AUTOENCODER_LOSS).sum()
         loss.backward()
         self.optimiser_autoencoder.step()
 
@@ -63,14 +63,14 @@ class AutoencoderOptimiser:
         self.toggle_params_grad(self.autoencoder_params, False)
         self.toggle_params_grad(self.discriminator_params, True)
         self.optimiser_discriminator.zero_grad()
-        loss = self.model(real_minibatch, Mode.PATCH_DISCRIMINATOR_LOSS)
+        loss = self.model(real_minibatch, Mode.PATCH_DISCRIMINATOR_LOSS).sum()
         loss.backward()
         self.optimiser_discriminator.step()
 
         # Calculate lazy-R1 regularisation
         if self.discriminator_iterations % self.r1_every == 0:
             self.optimiser_discriminator.zero_grad()
-            r1_loss = self.model(real_minibatch, Mode.R1_LOSS)
+            r1_loss = self.model(real_minibatch, Mode.R1_LOSS).sum()
             r1_loss *= self.r1_every
             r1_loss.backward()
             self.optimiser_discriminator.step()
