@@ -9,14 +9,34 @@ from swapping_autoencoder import SwappingAutoencoder, ForwardMode as Mode
 from taesung_data_loading import ConfigurableDataLoader
 
 
-class AutoencoderOptimiser:
-    def __init__(self, image_crop_size):
+class MultiGPUWrapper:
+    def __init__(self, model: SwappingAutoencoder):
         if torch.cuda.device_count() > 1:
             print("Initialising model for ", torch.cuda.device_count(), "GPUs!")
-            self.model = torch.nn.DataParallel(SwappingAutoencoder(image_crop_size)).to(device)
+            self.model = torch.nn.DataParallel(model).to(device)
         else:
             print("Running on single device ", device)
-            self.model = SwappingAutoencoder(image_crop_size).to(device)
+            self.model = model.to(device)
+
+    def get_autoencoder_params(self):
+        return self.model.get_autoencoder_params()
+
+    def get_discriminator_params(self):
+        return self.model.get_discriminator_params()
+
+    def __call__(self, *args, **kwargs):
+        return self.model(*args, **kwargs)
+
+    def state_dict(self):
+        return self.model.state_dict()
+
+    def load_state_dict(self, state_dict):
+        return self.model.load_state_dict(state_dict)
+
+
+class AutoencoderOptimiser:
+    def __init__(self, image_crop_size):
+        self.model = MultiGPUWrapper(SwappingAutoencoder(image_crop_size))
         self.autoencoder_params = self.model.get_autoencoder_params()
         self.optimiser_autoencoder = optim.Adam(self.autoencoder_params, lr=0.002, betas=(0.0, 0.99))
         self.r1_every = 16
