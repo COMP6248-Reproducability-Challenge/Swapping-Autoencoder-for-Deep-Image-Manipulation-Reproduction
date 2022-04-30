@@ -103,7 +103,6 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
             losses = optimiser.train_generator_step(real_minibatch)
         training_discriminator = not training_discriminator
 
-        print(f"{i}/{iterations}. \t\tTime:", datetime.now().strftime("%H:%M:%S"), "\tLosses:", losses)
         if i % 100 == 0:
             print(f"{i}/{iterations}. \t\tTime:", datetime.now().strftime("%H:%M:%S"), "\tLosses:", losses)
             save_train_state(optimiser, i)
@@ -153,7 +152,7 @@ if __name__ == '__main__':
     data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=batch_size, num_gpus=0, device=device)
     print("Dataset loaded")
     print("Starting training from iteration ", start_i, "...")
-    load_state = (start_i == 0)
+    load_state = bool(start_i == 0)
     if load_state:
         print("Reloading training state from saves/optimiser.pt")
     else:
