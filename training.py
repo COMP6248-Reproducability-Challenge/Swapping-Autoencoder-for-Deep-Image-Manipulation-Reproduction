@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 import torch
 from torch import optim
@@ -58,6 +59,7 @@ class AutoencoderOptimiser:
         loss = self.model(real_minibatch, Mode.AUTOENCODER_LOSS).sum()
         loss.backward()
         self.optimiser_autoencoder.step()
+        return {"autoE_loss": loss}
 
     def train_discriminator_step(self, real_minibatch):
         self.toggle_params_grad(self.autoencoder_params, False)
@@ -67,6 +69,7 @@ class AutoencoderOptimiser:
         loss.backward()
         self.optimiser_discriminator.step()
 
+        ret_losses = {"pathD_loss": loss}
         # Calculate lazy-R1 regularisation
         if self.discriminator_iterations % self.r1_every == 0:
             self.optimiser_discriminator.zero_grad()
@@ -74,10 +77,11 @@ class AutoencoderOptimiser:
             r1_loss *= self.r1_every
             r1_loss.backward()
             self.optimiser_discriminator.step()
+            ret_losses["disc_loss"] = r1_loss
 
         self.discriminator_iterations += 1
 
-        return {"patchD_loss"}
+        return ret_losses
 
 
 def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size: int, load_state=False):
@@ -86,21 +90,19 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
     else:
         optimiser = AutoencoderOptimiser(image_crop_size)
 
+    print("Time:", datetime.now().strftime("%H:%M:%S"))
     training_discriminator = False
     for i in range(iterations):
         real_minibatch = next(data_loader)["real_A"].to(device)
         if training_discriminator:
-            optimiser.train_discriminator_step(real_minibatch)
+            losses = optimiser.train_discriminator_step(real_minibatch)
         else:
-            optimiser.train_generator_step(real_minibatch)
-        print("Iter:", i, "complete. Trained discriminator:", training_discriminator),
+            losses = optimiser.train_generator_step(real_minibatch)
         training_discriminator = not training_discriminator
 
-        # if i % 480 == 0:
-        # TODO print current losses/metrics
         if i % 100 == 0:
+            print(f"{i}/{iterations}. \t\tTime:", datetime.now().strftime("%H:%M:%S"), "\tLosses:", losses)
             save_train_state(optimiser, i)
-        # TODO evaluate metrics of model
 
 
 def save_train_state(optimiser: AutoencoderOptimiser, i: int):
@@ -137,7 +139,8 @@ if __name__ == '__main__':
     print("Starting...")
     image_crop_size = 64
     print("Loading dataset")
-    data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=16, num_gpus=0, device=device)
+    batch_size = 128
+    data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=batch_size, num_gpus=0, device=device)
     print("Dataset loaded")
     print("Starting training...")
-    train(iterations=25 * 1000 ** 2, data_loader=data_loader, image_crop_size=image_crop_size)
+    train(iterations=int(25 * 1000 ** 2 // batch_size), data_loader=data_loader, image_crop_size=image_crop_size)
