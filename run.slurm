@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --partition=ecsstudents
-#SBATCH --nodes=1
-#SBATCH --tasks=4
-#SBATCH --gpus-per-node=1
-#SBATCH --mem=64gb
+#SBATCH --partition=ecsall
+#SBATCH --gpus-per-node=4
 #SBATCH --output=/ECShome/cn2g18/6248/slurm-out/%j.out
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=cn2g18@soton.ac.uk
+#SBATCH --time=4-23:59
 
 #export TORCH_CUDA_ARCH_LIST="7.5"
 
@@ -19,8 +19,11 @@ echo "==================Copy of Running script========================="
 cat run.slurm
 echo "================================================================"
 
+mkdir /ECSssd/data-sets
+cp -r ../CwkData/lsun/* /ECSssd/data-sets
+
 eval "$(conda shell.bash hook)"
-conda activate 6248
+conda activate 6248_39
 python --version
 echo "running training.py"
-python training.py
+python training.py 20550
