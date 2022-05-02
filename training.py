@@ -58,32 +58,34 @@ class AutoencoderOptimiser:
         self.toggle_params_grad(self.autoencoder_params, True)
         self.toggle_params_grad(self.discriminator_params, False)
         self.optimiser_autoencoder.zero_grad()
-        loss = self.model(real_minibatch, Mode.AUTOENCODER_LOSS).sum()
+        loss, metrics = self.model(real_minibatch, Mode.AUTOENCODER_LOSS)
+        loss = loss.mean()
         loss.backward()
         self.optimiser_autoencoder.step()
-        return {"autoE": loss}
+        return metrics
 
     def train_discriminator_step(self, real_minibatch):
         self.toggle_params_grad(self.autoencoder_params, False)
         self.toggle_params_grad(self.discriminator_params, True)
         self.optimiser_discriminator.zero_grad()
-        loss = self.model(real_minibatch, Mode.PATCH_DISCRIMINATOR_LOSS).sum()
+        loss, metrics = self.model(real_minibatch, Mode.PATCH_DISCRIMINATOR_LOSS)
+        loss = loss.mean()
         loss.backward()
         self.optimiser_discriminator.step()
 
-        ret_losses = {"patchD": loss}
         # Calculate lazy-R1 regularisation
         if self.discriminator_iterations % self.r1_every == 0:
             self.optimiser_discriminator.zero_grad()
-            r1_loss = self.model(real_minibatch, Mode.R1_LOSS).sum()
+            r1_loss, r1_metrics = self.model(real_minibatch, Mode.R1_LOSS)
+            r1_loss = r1_loss.mean()
             r1_loss *= self.r1_every
             r1_loss.backward()
             self.optimiser_discriminator.step()
-            ret_losses["r1"] = r1_loss
+            metrics.update(r1_metrics)
 
         self.discriminator_iterations += 1
 
-        return ret_losses
+        return metrics
 
 
 def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size: int, start_i: int = 0,
@@ -93,7 +95,8 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
     else:
         optimiser = AutoencoderOptimiser(image_crop_size)
 
-    last_losses = {"autoE": "unknown", "patchD": "unknown", "r1": "unknown"}
+    last_losses = {'autoE': "", 'L1Dist': "", 'disc': "", 'r1': "",
+                   'patchReal': "", 'patchFake': "", 'discReal': "", 'discFake': ""}
     print_every = 50
 
     print("Time:", datetime.now().strftime("%H:%M:%S"), flush=True)
@@ -102,14 +105,13 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
         real_minibatch = next(data_loader)["real_A"].to(device)
         if training_discriminator:
             losses = optimiser.train_discriminator_step(real_minibatch)
-            last_losses = last_losses | losses
         else:
             losses = optimiser.train_generator_step(real_minibatch)
         training_discriminator = not training_discriminator
 
         if i % print_every == 0 or i % print_every == (print_every - 1):
             # Collect losses for the other model from the previous iteration
-            last_losses = last_losses | {key: loss.item() for (key, loss) in losses.items()}
+            last_losses.update({key: loss.item() for (key, loss) in losses.items()})
 
         if i % print_every == 0:
             print(f"{i}/{iterations}. \t\tTime:", datetime.now().strftime("%H:%M:%S"), "\tLosses:", last_losses,
@@ -157,7 +159,7 @@ if __name__ == '__main__':
     print("Starting...", flush=True)
     image_crop_size = 64
     print("Loading dataset", flush=True)
-    batch_size = 128
+    batch_size = 64
     data_loader = load_church_data(image_crop_size=image_crop_size, batch_size=batch_size, num_gpus=0, device=device)
     print("Dataset loaded", flush=True)
     print("Starting training from iteration ", start_i, "...", flush=True)

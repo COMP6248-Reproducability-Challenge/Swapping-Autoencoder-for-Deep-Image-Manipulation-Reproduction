@@ -7,10 +7,18 @@ from stylegan2_pytorch.stylegan2_model import ConvLayer, ResBlock, EqualLinear
 from taesung_data_loading.util import apply_random_crop
 
 
-def get_random_patches(images, num_crops=8, patch_dim=128, min_scale=1 / 8, max_scale=1 / 4):
+def get_random_patches(images, num_crops=8, min_scale=1 / 8, max_scale=1 / 4):
     """
         Generate num_crops random patches from each image in images
     """
+    if images.ndim == 4:  # Batch of b images
+        b, c, h, w = images.shape
+    elif images.ndim == 3:  # Single image
+        c, h, w = images.shape
+    else:
+        raise NotImplementedError("get_random_patches not implemented for tensor of dimensionality ", images.ndim,
+                                  ". Shape: ", images.shape)
+    patch_dim = h // 4
     return apply_random_crop(images, patch_dim, (min_scale, max_scale), num_crops)
 
 

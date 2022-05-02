@@ -10,10 +10,12 @@ from stylegan2_pytorch.stylegan2_model import ResBlock, ConvLayer, EqualLinear
 class Encoder(torch.nn.Module):
     """
         Encoder - takes images and breaks down into two codes (Structure and Texture)
+
+        small_images = True if last layer needs to be 1x1 convolution (e.g. crop_width <= 64)
     """
 
     # TODO - confirm which params we want to take in and which to hardcode
-    def __init__(self, no_downsamples=4, n_channels=32, structure_channels=8, antialias_used=False):
+    def __init__(self, no_downsamples=4, n_channels=32, structure_channels=8, antialias_used=True, small_images=False):
         super().__init__()
 
         # TODO is it necessary to do the blur kernel bit?
@@ -28,7 +30,7 @@ class Encoder(torch.nn.Module):
         resblocks = []
         for i in range(no_downsamples):
             out_channels = n_channels * (2 ** 1)
-            resblocks.append(ResBlock(n_channels, out_channels))
+            resblocks.append(ResBlock(n_channels, out_channels, blur_kernel, reflection_pad=True))
             n_channels = out_channels
 
         # Adding them sequentially
@@ -45,8 +47,9 @@ class Encoder(torch.nn.Module):
 
         # Texture Branch
         self.texture = nn.Sequential(
-            ConvLayer(n_channels, n_channels * 2, 3, downsample=True, blur_kernel=[1]),
-            ConvLayer(n_channels * 2, n_channels * 4, 3, downsample=True, blur_kernel=[1]),
+            ConvLayer(n_channels, n_channels * 2, 3, downsample=True, blur_kernel=[1], pad=0),
+            ConvLayer(n_channels * 2, n_channels * 4, 1 if small_images else 3, downsample=True, blur_kernel=[1],
+                      pad=0),
             nn.AdaptiveAvgPool2d(1),
             EqualLinear(n_channels * 4, n_channels * 4)
         )
@@ -57,7 +60,6 @@ class Encoder(torch.nn.Module):
 
         structure = self.structure(out)
         texture = torch.flatten(self.texture(out), 1)
-        # TODO - In the code they take the mean(dim(2,3)) of the texture - I'm not sure why?
 
         structure = normalise(structure)
         texture = normalise(texture)

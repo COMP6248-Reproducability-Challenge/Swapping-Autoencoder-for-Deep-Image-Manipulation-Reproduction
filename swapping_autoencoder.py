@@ -23,10 +23,10 @@ class SwappingAutoencoder(nn.Module):
 
     def __init__(self, image_crop_size):
         super().__init__()
-        self.encoder = Encoder()
+        self.encoder = Encoder(small_images=image_crop_size <= 64)
         self.generator = Decoder()
         self.discriminator = RealismDiscriminator(image_crop_size)
-        self.patch_discriminator = PatchDiscriminator()
+        self.patch_discriminator = PatchDiscriminator(image_crop_size // 4)
 
     def swap(self, images):
         """
@@ -66,7 +66,8 @@ class SwappingAutoencoder(nn.Module):
         # (?) author's code uses 1.0 * L_GAN_swap but I'm pretty sure that's an error as it doesn't match the paper
         L_GAN = 0.5 * L_GAN_rec + 0.5 * L_GAN_swap
         batch_losses = L_rec + L_GAN + L_co_occur_GAN
-        return batch_losses.sum()
+        loss = batch_losses.mean()
+        return loss, {"autoE": loss, "L1Dist": L_rec.mean()}
 
     def calculate_patch_discriminator_loss(self, real_minibatch):
         """
@@ -89,7 +90,9 @@ class SwappingAutoencoder(nn.Module):
         L_GAN_fake = 0.5 * L_GAN_rec + 0.5 * L_GAN_swap
 
         batch_losses = L_patch_real + L_patch_swapped + L_GAN_real + L_GAN_fake
-        return batch_losses.sum()
+        loss = batch_losses.mean()
+        return loss, {"disc": loss, "patchReal": L_patch_real.mean(), "patchFake": L_patch_swapped.mean(),
+                      "discReal": L_GAN_real.mean(), "discFake": L_GAN_fake.mean()}
 
     def calculate_r1_loss(self, real_minibatch):
         """
@@ -109,8 +112,8 @@ class SwappingAutoencoder(nn.Module):
             retain_graph=True
         )
         grad_disc_square = grad_disc_real.pow(2)
-        # Not 100% on this mean calculation, the author's code uses a summation over a list of dimensions
-        R1_discriminator = lambda_discriminator / 2 * grad_disc_square.mean()
+        dims = list(range(1, grad_disc_square.ndim))
+        R1_discriminator = lambda_discriminator / 2 * grad_disc_square.sum(dims)
 
         real_patches = get_random_patches(real_minibatch)
         real_patches.requires_grad_(True)
@@ -124,11 +127,12 @@ class SwappingAutoencoder(nn.Module):
             retain_graph=True
         )
         grad_patch_square = 0.5 * grad_patch_real.pow(2) + 0.5 * grad_patch_target.pow(2)
-        # Not 100% on this mean calculation, the author's code uses a summation over a list of dimensions
-        R1_patch = lambda_patch / 2 * grad_patch_square.mean()
+        dims = list(range(1, grad_patch_square.ndim))
+        R1_patch = lambda_patch / 2 * grad_patch_square.sum(dims)
 
         batch_losses = R1_discriminator + R1_patch
-        return batch_losses.sum()
+        loss = batch_losses.mean()
+        return loss, {"r1": loss}
 
     def get_discriminator_params(self):
         return list(self.patch_discriminator.parameters()) + list(self.discriminator.parameters())

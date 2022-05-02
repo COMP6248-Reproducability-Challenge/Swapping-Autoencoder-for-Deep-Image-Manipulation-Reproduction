@@ -48,13 +48,13 @@ class UpsamplingResnet(torch.nn.Module):
 '''
 
 
-class TextureResBlock(torch.nn.Module):  # TODO - check that this is the same as the two above!
-    def __init__(self, in_ch, out_ch, texture_dim, upsample, blur_kernel=(1, 3, 3, 1), noise=None):
+class TextureResBlock(torch.nn.Module):
+    def __init__(self, in_ch, out_ch, texture_dim, upsample, blur_kernel=(1, 3, 3, 1)):
         super().__init__()
 
         self.upsample = upsample
         self.conv1 = StyledConv(in_ch, out_ch, 3, texture_dim, upsample=upsample,
-                                blur_kernel=blur_kernel)  # TODO don't get the parameters, just copying theirs
+                                blur_kernel=blur_kernel, use_noise=upsample)
         self.conv2 = StyledConv(out_ch, out_ch, 3, texture_dim)
 
         if in_ch == out_ch:
@@ -64,10 +64,9 @@ class TextureResBlock(torch.nn.Module):  # TODO - check that this is the same as
         else:
             self.skip = ConvLayer(in_ch, out_ch, 1, activate=False, bias=False)
 
-    def forward(self, x, texture):  # noise?? - in taesungp - no noise in forward
+    def forward(self, x, texture):
         if self.upsample:
-            skip = F.interpolate(self.skip(x), scale_factor=2, mode='bilinear',
-                                 align_corners=False)  # TODO Don't really get this bit
+            skip = F.interpolate(self.skip(x), scale_factor=2, mode='bilinear', align_corners=False)
         else:
             skip = self.skip(x)
         res = self.conv2(self.conv1(x, texture), texture)
