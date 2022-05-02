@@ -111,7 +111,7 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
 
         if i % print_every == 0 or i % print_every == (print_every - 1):
             # Collect losses for the other model from the previous iteration
-            last_losses.update({key: loss.item() for (key, loss) in losses.items()})
+            last_losses.update({key: loss.mean().item() for (key, loss) in losses.items()})
 
         if i % print_every == 0:
             print(f"{i}/{iterations}. \t\tTime:", datetime.now().strftime("%H:%M:%S"), "\tLosses:", last_losses,
