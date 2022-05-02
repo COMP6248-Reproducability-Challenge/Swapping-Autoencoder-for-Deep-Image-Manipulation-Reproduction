@@ -79,7 +79,7 @@ class AutoencoderOptimiser:
             r1_loss *= self.r1_every
             r1_loss.backward()
             self.optimiser_discriminator.step()
-            ret_losses["disc"] = r1_loss
+            ret_losses["r1"] = r1_loss
 
         self.discriminator_iterations += 1
 
@@ -93,7 +93,7 @@ def train(iterations: int, data_loader: ConfigurableDataLoader, image_crop_size:
     else:
         optimiser = AutoencoderOptimiser(image_crop_size)
 
-    last_losses = {"autoE": "unknown", "patchD": "unknown", "disc": "unknown"}
+    last_losses = {"autoE": "unknown", "patchD": "unknown", "r1": "unknown"}
     print_every = 50
 
     print("Time:", datetime.now().strftime("%H:%M:%S"), flush=True)
