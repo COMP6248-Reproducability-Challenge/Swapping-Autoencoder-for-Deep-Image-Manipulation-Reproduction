@@ -25,6 +25,7 @@ def load_church_data(image_crop_size, phase='train', batch_size=1, num_gpus=1, d
         preprocess="scale_shortside_and_crop",
         preprocess_crop_padding=None,
         no_flip=True,
-        device=device
+        device=device,
+        is_lsun=True
     )
     return ConfigurableDataLoader(options)

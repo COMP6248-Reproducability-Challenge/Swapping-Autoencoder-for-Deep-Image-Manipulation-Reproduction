@@ -1,15 +1,17 @@
+import os.path
 import random
 import sys
-import os.path
-from PIL import Image
-from taesung_data_loading.base_dataset import BaseDataset, get_transform
+
 import cv2
 import numpy as np
+from PIL import Image
+
+from taesung_data_loading.base_dataset import BaseDataset, get_transform
+
 if sys.version_info[0] == 2:
     import cPickle as pickle
 else:
     import pickle
-import torchvision.transforms as transforms
 
 
 class LMDBDataset(BaseDataset):
@@ -38,7 +40,7 @@ class LMDBDataset(BaseDataset):
         random.Random(0).shuffle(self.keys)
 
         self.transform = get_transform(self.opt, grayscale=False)
-        if "lsun" in self.opt.dataroot.lower():
+        if "lsun" in self.opt.dataroot.lower() or opt.is_lsun:
             print("Seems like a LSUN dataset, so we will apply BGR->RGB conversion")
 
 
