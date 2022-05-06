@@ -8,9 +8,10 @@ class DataLoadOptions:
         self.__dict__.update(kwargs)
 
 
-def load_church_data(image_crop_size, phase='train', batch_size=1, num_gpus=1, device="cpu") -> ConfigurableDataLoader:
+def load_church_data(image_crop_size, phase='train', batch_size=1, num_gpus=1, device="cpu",
+                     dir_path="/ECSssd/data-sets/church_outdoor_train_lmdb") -> ConfigurableDataLoader:
     dirname = os.path.dirname(__file__)
-    filename = os.path.join(dirname, r"/ECSssd/data-sets/church_outdoor_train_lmdb")
+    filename = os.path.join(dirname, dir_path)
     options = DataLoadOptions(
         dataroot=filename,
         dataset_mode="lmdb",
