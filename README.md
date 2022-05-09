@@ -38,7 +38,7 @@ Alternatively a model ```run.slurm``` file has been provided for running on the 
 (This file will require significant modifications to run elsewhere).
 
 ### Pretrained Model
-The pretrained model (```optimiser.pt``) is too large for GitHub (370MB), for a copy of this please contact the re-implementing authors.
+The pretrained model (```optimiser.pt```) is too large for GitHub (370MB), for a copy of this please contact the re-implementing authors.
 
 ## Code Structure
 * ```/stylegan2_pytorch``` Local copy of [https://github.com/rosinality/stylegan2-pytorch](https://github.com/rosinality/stylegan2-pytorch)
