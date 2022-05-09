@@ -73,7 +73,6 @@ class TextureResBlock(torch.nn.Module):
         return (skip + res) / math.sqrt(2)
 
 
-# ToDo - don't really understand this class (first modulation)
 class GeneratorTexturalModulation(torch.nn.Module):
     def __init__(self, in_ch, out_ch):
         super().__init__()
@@ -90,9 +89,6 @@ class GeneratorTexturalModulation(torch.nn.Module):
 
 class Decoder(torch.nn.Module):
 
-    # ToDo - check which of these params to take in and which to hardcode
-    #  Also complaining about blur_kernel being mutable
-    #  And not sure about noise parameter - I've just replicated what they do in their implementation
     def __init__(self,
                  channel=32,
                  structure_channels=8,

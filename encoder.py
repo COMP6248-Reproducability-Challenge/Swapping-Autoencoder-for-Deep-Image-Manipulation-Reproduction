@@ -14,11 +14,9 @@ class Encoder(torch.nn.Module):
         small_images = True if last layer needs to be 1x1 convolution (e.g. crop_width <= 64)
     """
 
-    # TODO - confirm which params we want to take in and which to hardcode
     def __init__(self, no_downsamples=4, n_channels=32, structure_channels=8, antialias_used=True, small_images=False):
         super().__init__()
 
-        # TODO is it necessary to do the blur kernel bit?
         if antialias_used:
             blur_kernel = [1, 2, 1]
         else:
@@ -36,8 +34,6 @@ class Encoder(torch.nn.Module):
         # Adding them sequentially
         self.DownSample = nn.Sequential(*resblocks)
 
-        # TODO check parameters for structure and texture branches.
-        #   Not sure if they are detailed in the paper, but I'm copying the implementation of their code
         # Structure branch
         self.structure = nn.Sequential(
             ConvLayer(n_channels, n_channels, 1),
