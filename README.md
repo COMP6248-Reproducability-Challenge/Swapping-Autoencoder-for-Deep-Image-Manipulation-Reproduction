@@ -6,7 +6,7 @@ Re-implementers: [Callum Newlands](mailto:cn2g18@soton.ac.uk), [Jacob Scott](mai
 ## Scope of Reimplementation
 
 This project aimed to re-implement the Swapping Autoencoder model architecture, as well as training the model on 
-(a downscaled version of) the LSUN Church dataset.
+(a downscaled version of) the LSUN Church dataset, and then assessing the reconstruction and image manipulation abilities of the trained model.
 
 ## Results and Report
 The full re-implementation report is available [here](https://github.com/COMP6248-Reproducability-Challenge/Swapping-Autoencoder-for-Deep-Image-Manipulation-Reproduction/blob/main/report.pdf)
